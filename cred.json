@@ -1,9 +1,1 @@
-{
-  "accessToken": "aoaAAAAAGmSmnUPvCfRHnY9ch9_YW1osGPIUNP2Cb3b9Pd4ycieWdzaMzdVRzMt0uQhiMXlZrPBXHkkVeF3034aeIBkc0:MGQCMF6yqPmuIGkBLNZ1TmNL3+e19eFw06+5l1wOWPpVK2ZRY6tpJyIyO0SVH57Avm7RkwIwC6+wcPbBVMh//vJGPWfqMEhdXu9aevlSpGMaesheY/KHzBexbOw4z2aSG7U9Xqgc",
-  "refreshToken": "aorAAAAAGoEllgQhu8C5dEvF8o0JPaXLwQmAHpkLgMZeGzTsuqw48LhCEFAxWOPvtetI-HVORWwaFokcNYX64_5NoBkc0:MGUCMQDbINTbP1yDffXpMc5JnG5EHza5psgQJSwCHzMWn4marrFBGaRFTfvUMiSKRjqpQi4CMHN4PbT3wILTf3diTDzeqPD7j24FVAR64mUuWUy718xGhjY/S/4JACaUynmc7D0SYQ",
-  "expiresAt": "2026-02-16T04:16:56.543872+00:00",
-  "clientIdHash": "eb515b69eaad80cfedfff4f21b6d341f4193fae9",
-  "authMethod": "IdC",
-  "provider": "Enterprise",
-  "region": "us-east-1"
-}
+{}
