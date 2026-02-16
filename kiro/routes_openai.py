@@ -350,12 +350,6 @@ async def chat_completions(request: Request, request_data: ChatCompletionRequest
                     logger.debug("Client disconnected during streaming (GeneratorExit in routes)")
                 except Exception as e:
                     streaming_error = e
-                    # Try to send [DONE] to client before finishing
-                    # so client doesn't "hang" waiting for data
-                    try:
-                        yield "data: [DONE]\n\n"
-                    except Exception:
-                        pass  # Client already disconnected
                     raise
                 finally:
                     await http_client.close()
@@ -375,7 +369,15 @@ async def chat_completions(request: Request, request_data: ChatCompletionRequest
                         else:
                             debug_logger.discard_buffers()
             
-            return StreamingResponse(stream_wrapper(), media_type="text/event-stream")
+            return StreamingResponse(
+                stream_wrapper(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                }
+            )
         
         else:
             
