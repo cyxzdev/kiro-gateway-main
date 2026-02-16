@@ -85,11 +85,11 @@ def _get_raw_env_value(var_name: str, env_file: str = ".env") -> Optional[str]:
 DEFAULT_SERVER_HOST: str = "0.0.0.0"
 SERVER_HOST: str = os.getenv("SERVER_HOST", DEFAULT_SERVER_HOST)
 
-# Server port (default: 39398)
+# Server port (default: 8000)
 # Can be overridden by CLI: python main.py --port 9000
 # Or by uvicorn directly: uvicorn main:app --port 9000
 # Also checks PORT env var for Railway/Heroku compatibility
-DEFAULT_SERVER_PORT: int = 39398
+DEFAULT_SERVER_PORT: int = 8000
 SERVER_PORT: int = int(os.getenv("SERVER_PORT", os.getenv("PORT", str(DEFAULT_SERVER_PORT))))
 
 # ==================================================================================================

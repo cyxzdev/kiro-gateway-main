@@ -22,6 +22,9 @@ debug*.json
 # Project-specific
 _notes/
 requests/
+cache.json
+.env
+cred.json
 
 # Testing
 .pytest_cache/

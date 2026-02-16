@@ -21,11 +21,13 @@
 Model metadata cache for Kiro Gateway.
 
 Thread-safe storage for available model information
-with TTL and lazy loading support.
+with TTL, lazy loading support, and persistent JSON storage.
 """
 
 import asyncio
+import json
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
@@ -40,8 +42,11 @@ class ModelInfoCache:
     Uses Lazy Loading for population - data is loaded
     only on first access or when cache is stale.
     
+    Persists to cache.json to avoid fetching from API on every startup.
+    
     Attributes:
         cache_ttl: Cache time-to-live in seconds
+        cache_file: Path to cache.json file
     
     Example:
         >>> cache = ModelInfoCache()
@@ -50,21 +55,86 @@ class ModelInfoCache:
         >>> max_tokens = cache.get_max_input_tokens("claude-sonnet-4")
     """
     
-    def __init__(self, cache_ttl: int = MODEL_CACHE_TTL):
+    def __init__(self, cache_ttl: int = MODEL_CACHE_TTL, cache_file: str = "cache.json"):
         """
         Initializes the model cache.
         
         Args:
             cache_ttl: Cache time-to-live in seconds (default from config)
+            cache_file: Path to cache file (default: cache.json)
         """
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._lock = asyncio.Lock()
         self._last_update: Optional[float] = None
         self._cache_ttl = cache_ttl
+        self._cache_file = Path(cache_file)
+        
+        # Try to load from cache file on initialization
+        self._load_from_file()
+    
+    def _load_from_file(self) -> None:
+        """
+        Load cache from cache.json file (synchronous, called during __init__).
+        
+        If file doesn't exist or is invalid, silently continues with empty cache.
+        Checks if cache is stale and logs appropriate message.
+        """
+        if not self._cache_file.exists():
+            logger.debug(f"Cache file not found: {self._cache_file}")
+            return
+        
+        try:
+            with open(self._cache_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            self._cache = data.get("models", {})
+            self._last_update = data.get("last_update")
+            
+            if self._last_update:
+                age_seconds = time.time() - self._last_update
+                age_hours = age_seconds / 3600
+                
+                if self.is_stale():
+                    logger.info(f"Loaded stale cache from {self._cache_file} ({len(self._cache)} models, {age_hours:.1f}h old). Will refresh from API.")
+                else:
+                    logger.info(f"Loaded fresh cache from {self._cache_file} ({len(self._cache)} models, {age_hours:.1f}h old)")
+            else:
+                logger.info(f"Loaded cache from {self._cache_file} ({len(self._cache)} models, no timestamp)")
+        
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed to parse cache file {self._cache_file}: {e}. Starting with empty cache.")
+        except Exception as e:
+            logger.warning(f"Failed to load cache from {self._cache_file}: {e}. Starting with empty cache.")
+    
+    def _save_to_file(self) -> None:
+        """
+        Save cache to cache.json file (synchronous).
+        
+        Creates the file if it doesn't exist.
+        Logs errors but doesn't raise exceptions (cache persistence is optional).
+        """
+        try:
+            data = {
+                "models": self._cache,
+                "last_update": self._last_update,
+                "cache_ttl": self._cache_ttl,
+            }
+            
+            # Write atomically: write to temp file, then rename
+            temp_file = self._cache_file.with_suffix('.tmp')
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            
+            # Atomic rename (overwrites existing file)
+            temp_file.replace(self._cache_file)
+            logger.debug(f"Saved cache to {self._cache_file} ({len(self._cache)} models)")
+        
+        except Exception as e:
+            logger.warning(f"Failed to save cache to {self._cache_file}: {e}")
     
     async def update(self, models_data: List[Dict[str, Any]]) -> None:
         """
-        Updates the model cache.
+        Updates the model cache and persists to cache.json.
         
         Thread-safely replaces cache contents with new data.
         
@@ -76,6 +146,9 @@ class ModelInfoCache:
             logger.info(f"Updating model cache. Found {len(models_data)} models.")
             self._cache = {model["modelId"]: model for model in models_data}
             self._last_update = time.time()
+            
+            # Save to file
+            self._save_to_file()
     
     def get(self, model_id: str) -> Optional[Dict[str, Any]]:
         """
